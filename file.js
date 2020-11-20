@@ -72,7 +72,7 @@ async function setup() {
 
 
 async function getData() {
-  const response = await fetch('belgium.csv');
+  const response = await fetch('belgium2.csv');
   const data = await response.text();
   const rows = data.split("\n").slice(1);
   dates = [];
