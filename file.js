@@ -38,6 +38,7 @@ window.addEventListener('load', setup);
 
 async function setup() {
     const ctxHosp = document.getElementById('hospChart').getContext('2d');
+    const ctxHospDiff = document.getElementById('hospChartDiff').getContext('2d');
     const ctx = document.getElementById('casesChart').getContext('2d');
     const ctx2 = document.getElementById('deathsChart').getContext('2d');
     const data = await getData();
@@ -52,7 +53,7 @@ async function setup() {
       data: {
           labels: hospData.dates,
           datasets: [{
-              label: 'Number of new lab-confirmed hospital intakes in the last 24h',
+              label: 'Number of new lab-confirmed hospital intakes in the last 24h (intake due to COVID)',
               backgroundColor: 'green',
               borderColor: 'rgb(255, 99, 132)',
               data: hospData.newIns
@@ -71,7 +72,36 @@ async function setup() {
         responsiveAnimationDuration: 0
         
       }
-  });
+    });
+
+
+    const hospChartDiff = new Chart(ctxHospDiff, {
+      // The type of chart we want to create
+      type: 'bar',
+
+      // The data for our dataset
+      data: {
+          labels: hospData.dates,
+          datasets: [{
+              label: 'Hospital intake minus hospital discharges in the last 24 hrs',
+              backgroundColor: 'blue',
+              data: hospData.netResult
+          }, {
+              label: 'Total number of lab-confirmed hospitalized patients at the moment of reporting (prevalence)',
+              backgroundColor: 'pink',
+              data: hospData.totalIns
+          }]
+      },
+
+      // Configuration options go here
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        responsiveAnimationDuration: 0
+        
+      }
+    });
+
 
     const casesChart = new Chart(ctx, {
         // The type of chart we want to create
@@ -152,31 +182,45 @@ async function getHosp() {
   dates = [];
   newIns = [];
   newOuts = [];
+  totalIns = [];
   let previousDate = '2020-03-15';
   let newInTotal = 0;
   let newOutTotal = 0;
+  let totalInTotal = 0;
+  
   rows.forEach(row => {
     const cols = row.split(",");
     const date = cols[0];
     const newInCurrentLine = parseInt(cols[8]);
     const newOutCurrentLine = parseInt(cols[9]);
+    const totalInCurrentLine = parseInt(cols[4]);
 
     if (previousDate === date) {
       dates.pop();
       newIns.pop();
       newOuts.pop();
+      totalIns.pop();
       newInTotal += newInCurrentLine;
       newOutTotal += newOutCurrentLine;
+      totalInTotal += totalInCurrentLine;
     } else {
       newInTotal = newInCurrentLine;
       newOutTotal = newOutCurrentLine;
+      totalInTotal = totalInCurrentLine;
       previousDate = date;
     }
 
     dates.push(date);
     newIns.push(newInTotal); 
     newOuts.push(newOutTotal);
+    totalIns.push(totalInTotal);
   });
 
-  return { dates, newIns, newOuts };
+  let netResult = []; 
+  for (let i = 0; i < newIns.length ; i++) {
+    let difference = newIns[i] - newOuts[i];
+    netResult.push(difference);
+  }
+
+  return { dates, newIns, newOuts, netResult, totalIns };
 }
